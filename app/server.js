@@ -6,7 +6,9 @@ var docker = new Docker({socketPath: '/var/run/docker.sock'});
 var targetFile = '/prometheus-docker-sd/docker-targets.json';
 
 const fs = require('fs');
-logger.level = 'warn';
+
+// read log level from environment variable
+logger.level = process.env.LOG_LEVEL || 'warn';
 
 const ONLY_USE_IP = (process.env.ONLY_USE_IP === 'true');
 
@@ -15,8 +17,8 @@ function convertDockerJson2Prometheus(data){
   var container = {
     'labels': {
       'job': containerName,
-      'container_name': containerName,
-      'container_id': data.Config.Hostname
+			'instance': containerName,
+			'container_name': containerName,
     },
     'targets': []
   };
@@ -45,7 +47,19 @@ function convertDockerJson2Prometheus(data){
           hostname = data.Config.Labels["prometheus-scrape.hostname"];
         }
         if(ONLY_USE_IP == true){
-          hostname = data.NetworkSettings.IPAddress;
+					// if container is running on network=host, we use localhost, otherwise we use the IP address of the first network
+					hostname = "localhost";
+
+					// path for networks is data.NetworkSettings.Networks, could all be null, so we need to check
+					if(data.NetworkSettings && data.NetworkSettings.Networks) {
+
+						if (Object.keys(data.NetworkSettings.Networks).length > 0) {
+							// we take the first network
+							hostname = data.NetworkSettings.Networks[Object.keys(data.NetworkSettings.Networks)[0]].IPAddress;
+						} else {
+							logger.warn('Container "' + containerName + '" has no networks! Will not be able to reach it.');
+						}
+					}
         }
         var target = hostname + ':' + port;
         container.targets.push(target);
@@ -67,8 +81,14 @@ function convertDockerJson2Prometheus(data){
         }
 
         if("com.docker.compose.service" in data.Config.Labels) {
-          container.labels["com_docker_compose_service"] = data.Config.Labels["com.docker.compose.service"];
-          logger.info('Set compose service name to "' + container.labels["com_docker_compose_service"] + '".');
+					var project = data.Config.Labels["com.docker.compose.project"];
+					var service = data.Config.Labels["com.docker.compose.service"];
+          container.labels["com_docker_compose_project"] = project;
+          container.labels["com_docker_compose_service"] = service;
+					container.labels["instance"] = project + "_" + service;
+
+					logger.info('Set docker compose project to "' + project + '".');
+					logger.info('Set docker compose service to "' + service + '".');
         }
       }else{
         logger.debug('Container "' + containerName + '" has the "prometheus-scrape.enabled" label, but it isn\'t set to true, so ignoring it.');
