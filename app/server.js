@@ -6,7 +6,7 @@ var docker = new Docker({socketPath: '/var/run/docker.sock'});
 var targetFile = '/prometheus-docker-sd/docker-targets.json';
 
 const fs = require('fs');
-logger.level = 'debug';
+logger.level = 'warn';
 
 const ONLY_USE_IP = (process.env.ONLY_USE_IP === 'true');
 
@@ -24,7 +24,6 @@ function convertDockerJson2Prometheus(data){
   if("Labels" in data.Config) {
     if("prometheus-scrape.enabled" in data.Config.Labels) {
       if(data.Config.Labels["prometheus-scrape.enabled"] == "true") {
-        logger.info('');
         logger.info('Container "' + containerName + '" is enabled for prometheus.');
 
         if("prometheus-scrape.job_name" in data.Config.Labels) {
@@ -71,16 +70,14 @@ function convertDockerJson2Prometheus(data){
           container.labels["com_docker_compose_service"] = data.Config.Labels["com.docker.compose.service"];
           logger.info('Set compose service name to "' + container.labels["com_docker_compose_service"] + '".');
         }
-
-        logger.info('');
       }else{
-        logger.info('Container "' + containerName + '" has the "prometheus-scrape.enabled" label, but it isn\'t set to true, so ignoring it.');
+        logger.debug('Container "' + containerName + '" has the "prometheus-scrape.enabled" label, but it isn\'t set to true, so ignoring it.');
       }
     }else{
-      logger.info('Container "' + containerName +  '" has no "prometheus-scrape.enabled" label and is ignored.');
+      logger.debug('Container "' + containerName +  '" has no "prometheus-scrape.enabled" label and is ignored.');
     }
   }else{
-    logger.info('Container "' + containerName + '" has no labels and is ignored.');
+    logger.debug('Container "' + containerName + '" has no labels and is ignored.');
   }
 
   if(container.targets.length){
