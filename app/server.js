@@ -47,19 +47,22 @@ function convertDockerJson2Prometheus(data){
           hostname = data.Config.Labels["prometheus-scrape.hostname"];
         }
         if(ONLY_USE_IP == true){
-					// if container is running on network=host, we use localhost, otherwise we use the IP address of the first network
-					hostname = "localhost";
-
-					// path for networks is data.NetworkSettings.Networks, could all be null, so we need to check
-					if(data.NetworkSettings && data.NetworkSettings.Networks) {
-
-						if (Object.keys(data.NetworkSettings.Networks).length > 0) {
-							// we take the first network
-							hostname = data.NetworkSettings.Networks[Object.keys(data.NetworkSettings.Networks)[0]].IPAddress;
-						} else {
-							logger.warn('Container "' + containerName + '" has no networks! Will not be able to reach it.');
-						}
-					}
+          if(data.HostConfig && data.HostConfig.NetworkMode == "host") {
+            // host network containers have no container IP, they are reachable via the loopback interface instead
+            hostname = "localhost";
+          } else {
+            var networks = (data.NetworkSettings && data.NetworkSettings.Networks) || {};
+            var networkNames = Object.keys(networks);
+            if(networkNames.length == 0) {
+              logger.warn('Container "' + containerName + '" has no networks, dropping scrape target.');
+              return null;
+            }
+            hostname = networks[networkNames[0]].IPAddress;
+            if(!hostname) {
+              logger.warn('Container "' + containerName + '" has no IP address on network "' + networkNames[0] + '", dropping scrape target.');
+              return null;
+            }
+          }
         }
         var target = hostname + ':' + port;
         container.targets.push(target);
