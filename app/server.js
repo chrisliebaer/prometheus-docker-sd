@@ -73,10 +73,10 @@ function convertDockerJson2Prometheus(data){
           logger.info('Set scheme to "' + container.labels["__scheme__"] + '".');
         }
 
-        //if("prometheus-scrape.scrape_interval" in data.Config.Labels) {
-        //  container.scrape_interval = data.Config.Labels["prometheus-scrape.scrape_interval"]; 
-        //  logger.info('Set scrape interval to "' + container.scrape_interval + '".');
-        //}
+        if("prometheus-scrape.scrape_interval" in data.Config.Labels) {
+          container.labels["__scrape_interval__"] = data.Config.Labels["prometheus-scrape.scrape_interval"];
+          logger.info('Set scrape interval to "' + container.labels["__scrape_interval__"] + '".');
+        }
 
         if("prometheus-scrape.metrics_path" in data.Config.Labels) {
           container.labels["__metrics_path__"] = data.Config.Labels["prometheus-scrape.metrics_path"];

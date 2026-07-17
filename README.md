@@ -89,6 +89,7 @@ Add the following labels to your containers.
 | prometheus-scrape.hostname       |        no | <Container-Name> | Hostname, if it differs from the container name or for access via the public interface. |
 | prometheus-scrape.port           |        no |             9090 | Port of the metrics endpoint.                       |
 | prometheus-scrape.scheme         |        no |             http | Scheme http or https                                |
+| prometheus-scrape.scrape_interval |        no | Prometheus default | Per-target scrape interval.                       |
 | prometheus-scrape.metrics_path   |        no |         /metrics | Path to the metrics endpoint.                       |
 
 **Important: The Container has to be in the same network (monitoring_ext) that prometheus.**
